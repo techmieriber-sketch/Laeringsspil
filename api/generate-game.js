@@ -69,7 +69,7 @@ export default async function handler(request, response) {
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-5.4-mini",
         temperature: 0.4,
         response_format: { type: "json_object" },
         messages: [
@@ -84,6 +84,7 @@ export default async function handler(request, response) {
 
     if (!openAiResponse.ok) {
       const errorBody = await openAiResponse.text();
+      console.error("OpenAI API-fejl:", errorBody);
       return response.status(502).json({
         error: "OpenAI API-kald fejlede.",
         details: errorBody
