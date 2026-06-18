@@ -215,14 +215,20 @@
         });
 
         if (!response.ok) {
-          throw new Error("API-kaldet virkede ikke endnu.");
+          const errorData = await response.json().catch(() => null);
+          const message =
+            errorData?.details ||
+            errorData?.error ||
+            "API-kaldet virkede ikke endnu.";
+
+          throw new Error(message);
         }
 
         const data = await response.json();
         showGame(data.words);
         statusBox.textContent = "Spillet er klar.";
       } catch (error) {
-        statusBox.textContent = "API'en er ikke koblet på endnu. Viser demo-spil.";
+        statusBox.textContent = "API-fejl: " + error.message;
         showGame(getDemoWords());
       }
 
