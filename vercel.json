@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "functions": {
+    "api/generate-game.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/generate-game",
+      "dest": "/api/generate-game.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
