@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Læringsspil</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f1ea;
+      color: #1f2933;
+    }
+
+    header {
+      background: #ffffff;
+      padding: 32px 20px;
+      border-bottom: 1px solid #ddd6cc;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2.4rem;
+    }
+
+    header p {
+      margin: 10px 0 0;
+      font-size: 1.1rem;
+      color: #52606d;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 32px auto;
+      padding: 0 20px 40px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      padding: 14px;
+      font-size: 1rem;
+      line-height: 1.5;
+      border: 1px solid #c9c2b8;
+      border-radius: 12px;
+      box-sizing: border-box;
+    }
+
+    input[type="file"] {
+      margin-top: 8px;
+      padding: 10px;
+      background: #f9fafb;
+      border: 1px solid #c9c2b8;
+      border-radius: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      margin-top: 18px;
+      padding: 14px 22px;
+      border: none;
+      border-radius: 999px;
+      background: #1f2933;
+      color: white;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #323f4b;
+    }
+
+    button:disabled {
+      background: #9aa5b1;
+      cursor: not-allowed;
+    }
+
+    .small {
+      font-size: 0.9rem;
+      color: #66788a;
+      margin-top: 8px;
+    }
+
+    .status {
+      margin-top: 16px;
+      font-weight: 700;
+    }
+
+    .word-card {
+      border: 1px solid #ddd6cc;
+      border-radius: 14px;
+      padding: 18px;
+      margin-top: 16px;
+      background: #fffdf8;
+    }
+
+    .word-card h3 {
+      margin: 0 0 8px;
+      font-size: 1.4rem;
+    }
+
+    .answers {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .answer-button {
+      margin: 0;
+      border-radius: 12px;
+      background: #eef2f7;
+      color: #1f2933;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .answer-button:hover {
+      background: #d9e2ec;
+    }
+
+    .correct {
+      background: #c6f6d5 !important;
+    }
+
+    .wrong {
+      background: #fed7d7 !important;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Læringsspil</h1>
+    <p>Lav faglige spil ud fra dine egne tekster</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1. Indsæt eller upload en tekst</h2>
+
+      <label for="fileInput">Upload PDF eller DOCX</label>
+      <input id="fileInput" type="file" accept=".pdf,.docx" />
+
+      <p class="small">
+        Upload virker først, når vi har lavet fil-læsningen. Indtil da kan du indsætte tekst herunder.
+      </p>
+
+      <label for="textInput">Indsæt fagtekst</label>
+      <textarea id="textInput" placeholder="Indsæt en fagtekst her..."></textarea>
+
+      <button id="generateButton">Lav læringsspil</button>
+
+      <div id="status" class="status"></div>
+    </section>
+
+    <section id="gameSection" class="card hidden">
+      <h2>2. Fagordsspil</h2>
+      <p id="scoreText">Svar på spørgsmålene om fagordene.</p>
+      <div id="gameContainer"></div>
+    </section>
+  </main>
+
+  <script>
+    const generateButton = document.getElementById("generateButton");
+    const textInput = document.getElementById("textInput");
+    const statusBox = document.getElementById("status");
+    const gameSection = document.getElementById("gameSection");
+    const gameContainer = document.getElementById("gameContainer");
+    const scoreText = document.getElementById("scoreText");
+
+    let score = 0;
+    let answered = 0;
+
+    generateButton.addEventListener("click", async () => {
+      const text = textInput.value.trim();
+
+      if (!text) {
+        statusBox.textContent = "Indsæt en tekst først.";
+        return;
+      }
+
+      generateButton.disabled = true;
+      statusBox.textContent = "Laver læringsspil...";
+
+      try {
+        const response = await fetch("/api/generate-game", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ text })
+        });
+
+        if (!response.ok) {
+          throw new Error("API-kaldet virkede ikke endnu.");
+        }
+
+        const data = await response.json();
+        showGame(data.words);
+        statusBox.textContent = "Spillet er klar.";
+      } catch (error) {
+        statusBox.textContent = "API'en er ikke koblet på endnu. Viser demo-spil.";
+        showGame(getDemoWords());
+      }
+
+      generateButton.disabled = false;
+    });
+
+    function showGame(words) {
+      score = 0;
+      answered = 0;
+      gameContainer.innerHTML = "";
+      gameSection.classList.remove("hidden");
+      scoreText.textContent = `Svar på ${words.length} spørgsmål.`;
+
+      words.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "word-card";
+
+        const title = document.createElement("h3");
+        title.textContent = item.word;
+
+        const explanation = document.createElement("p");
+        explanation.textContent = item.explanation;
+
+        const question = document.createElement("p");
+        question.innerHTML = `<strong>${item.question}</strong>`;
+
+        const answersBox = document.createElement("div");
+        answersBox.className = "answers";
+
+        const answers = shuffle([
+          item.correctAnswer,
+          ...item.wrongAnswers
+        ]);
+
+        answers.forEach(answer => {
+          const button = document.createElement("button");
+          button.className = "answer-button";
+          button.textContent = answer;
+
+          button.addEventListener("click", () => {
+            const buttons = answersBox.querySelectorAll("button");
+
+            buttons.forEach(btn => {
+              btn.disabled = true;
+
+              if (btn.textContent === item.correctAnswer) {
+                btn.classList.add("correct");
+              }
+            });
+
+            if (answer === item.correctAnswer) {
+              score++;
+            } else {
+              button.classList.add("wrong");
+            }
+
+            answered++;
+            scoreText.textContent = `Du har ${score} rigtige ud af ${answered} besvarede.`;
+          });
+
+          answersBox.appendChild(button);
+        });
+
+        card.appendChild(title);
+        card.appendChild(explanation);
+        card.appendChild(question);
+        card.appendChild(answersBox);
+
+        gameContainer.appendChild(card);
+      });
+    }
+
+    function shuffle(array) {
+      return array.sort(() => Math.random() - 0.5);
+    }
+
+    function getDemoWords() {
+      return [
+        {
+          word: "fagord",
+          explanation: "Et fagord er et ord, der hører til et bestemt fag eller område.",
+          question: "Hvad betyder fagord?",
+          correctAnswer: "Et ord der hører til et bestemt fag",
+          wrongAnswers: [
+            "Et ord man bruger i fritiden",
+            "Et ord der altid er let at forstå",
+            "Et ord uden betydning"
+          ]
+        },
+        {
+          word: "hygiejne",
+          explanation: "Hygiejne handler om at holde noget rent og undgå smitte.",
+          question: "Hvad handler hygiejne om?",
+          correctAnswer: "At holde noget rent og undgå smitte",
+          wrongAnswers: [
+            "At lave mad hurtigt",
+            "At skrive en tekst",
+            "At måle temperatur uden grund"
+          ]
+        },
+        {
+          word: "desinfektion",
+          explanation: "Desinfektion betyder, at man fjerner eller dræber bakterier og virus.",
+          question: "Hvad betyder desinfektion?",
+          correctAnswer: "At fjerne eller dræbe bakterier og virus",
+          wrongAnswers: [
+            "At gøre noget koldt",
+            "At pakke mad ind",
+            "At læse en instruktion"
+          ]
+        }
+      ];
+    }
+  </script>
+</body>
+</html>
